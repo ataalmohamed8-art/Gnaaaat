@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مجرة الحب - جنات</title>
+    <!-- Three.js لبناء المجرة والقلب 4D -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #030005; font-family: 'Cairo', sans-serif; color: #fff; }
+        canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
+
+        /* شاشة البداية مطابقة للفيديو */
+        #welcome-screen {
+            position: fixed; inset: 0; background: #050208; z-index: 100;
+            display: flex; align-items: center; justify-content: center;
+            transition: opacity 1s ease;
+        }
+        .welcome-box {
+            background: rgba(18, 8, 25, 0.9);
+            border: 1px solid rgba(255, 105, 180, 0.4);
+            backdrop-filter: blur(20px);
+            padding: 40px 30px; border-radius: 28px; text-align: center;
+            box-shadow: 0 0 50px rgba(255, 20, 147, 0.4); max-width: 340px; width: 90%;
+        }
+        .welcome-box h1 { font-size: 22px; font-weight: 900; color: #fff; margin-bottom: 10px; text-shadow: 0 0 10px rgba(255,105,180,0.8); }
+        .welcome-box p { font-size: 13px; color: #ff85c0; margin-bottom: 25px; letter-spacing: 1px; }
+        .heart-icon { font-size: 40px; margin-bottom: 15px; animation: bounce 1.5s infinite; }
+        
+        .btn-enter {
+            background: linear-gradient(135deg, #ff1493, #ff69b4); color: white; border: none;
+            padding: 14px 28px; border-radius: 50px; font-size: 12px; font-weight: 700;
+            letter-spacing: 1px; cursor: pointer; box-shadow: 0 4px 20px rgba(255, 20, 147, 0.6);
+            transition: transform 0.2s;
+        }
+        .btn-enter:hover { transform: scale(1.05); }
+
+        /* واجهة المجرة */
+        .ui-layer {
+            position: fixed; inset: 0; z-index: 10; pointer-events: none;
+            display: flex; flex-direction: column; justify-content: space-between;
+            padding: 30px 20px; opacity: 0; transition: opacity 1s ease;
+        }
+        .interactive { pointer-events: auto; }
+        .top-title { text-align: center; }
+        .top-title h2 { font-size: 20px; font-weight: 700; color: #ffb6c1; text-shadow: 0 0 15px rgba(255, 105, 180, 0.9); }
+        .top-title p { font-size: 11px; color: #ff85c0; letter-spacing: 2px; margin-top: 5px; }
+
+        /* إرشادات تفاعلية للمجرة */
+        .galaxy-hint {
+            position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
+            background: rgba(20, 10, 30, 0.7); border: 1px solid rgba(255,105,180,0.3);
+            padding: 8px 20px; border-radius: 20px; font-size: 11px; color: #ffb6c1;
+            backdrop-filter: blur(10px); text-align: center; pointer-events: none;
+            box-shadow: 0 0 15px rgba(255,20,147,0.2);
+        }
+
+        /* نافذة الكروت المنبثقة */
+        .modal-overlay {
+            position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        
+        .card-box {
+            background: rgba(18, 8, 25, 0.95);
+            border: 1px solid rgba(255, 105, 180, 0.5);
+            border-radius: 24px; padding: 25px; width: 310px; text-align: center;
+            box-shadow: 0 0 40px rgba(255, 20, 147, 0.6);
+            transform: scale(0.9); transition: transform 0.3s ease;
+        }
+        .modal-overlay.active .card-box { transform: scale(1); }
+        
+        .card-avatar {
+            width: 70px; height: 70px; border-radius: 50%; object-fit: cover;
+            margin: 0 auto 15px; border: 2px solid #ff69b4;
+            box-shadow: 0 0 20px rgba(255, 105, 180, 0.8);
+        }
+        .card-box h3 { font-size: 17px; color: #ffb6c1; margin-bottom: 10px; font-weight: 700; }
+        .card-box p { font-size: 13px; color: #e5e7eb; line-height: 1.6; margin-bottom: 20px; }
+        
+        .btn-volver {
+            background: transparent; border: 1px solid #ff69b4; color: #ff69b4;
+            padding: 8px 24px; border-radius: 20px; font-size: 11px; font-weight: 700;
+            cursor: pointer; letter-spacing: 1px; transition: all 0.2s;
+        }
+        .btn-volver:hover { background: #ff69b4; color: #fff; box-shadow: 0 0 15px rgba(255,20,147,0.8); }
+
+        @keyframes bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- شاشة البداية -->
+    <div id="welcome-screen">
+        <div class="welcome-box">
+            <div class="heart-icon">💖</div>
+            <h1>مجرة الحب لعيونك يا جنات</h1>
+            <p>Una Galaxia de Amor para Ti ✨</p>
+            <button class="btn-enter" onclick="launchUniverse()">دخول إلى المجرة 🌌</button>
+        </div>
+    </div>
+
+    <!-- واجهة المجرة والعنوان -->
+    <div class="ui-layer" id="ui-layer">
+        <div class="top-title">
+            <h2>UNA GALAXIA DE AMOR PARA TI</h2>
+            <p>مخصص لـ جنات - أميرتي وسر سعادتي</p>
+        </div>
+        <div class="galaxy-hint">
+            💡 انقر على الكرات المضيئة الدوارة داخل المجرة لفتح الرسائل والذكريات
+        </div>
+    </div>
+
+    <!-- نافذة الكارت -->
+    <div class="modal-overlay" id="modal-overlay" onclick="closeCard(event)">
+        <div class="card-box">
+            <img id="card-img" src="" class="card-avatar" alt="Art">
+            <h3 id="card-title">عنوان</h3>
+            <p id="card-text">نص الرسالة...</p>
+            <button class="btn-volver" onclick="closeCardDirect()">العودة للمجرة 🤍</button>
+        </div>
+    </div>
+
+    <script>
+        let scene, camera, renderer, galaxyParticles, centralHeart;
+        let interactiveOrbs = [];
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
+
+        // محتوى الكروت بالعربي
+        const cardsData = [
+            {
+                title: "أميرة قلبي ✨",
+                text: "كل ما مرت دقيقة وأنا معاكي، بحس إن دنيتي بقت أجمل وأهدى بوجودك يا جنات.",
+                img: "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=150&auto=format&fit=crop&q=80"
+            },
+            {
+                title: "روح الروح 🌹",
+                text: "إنتِ الشخص اللي بيخلي قلبي يدق بطريقة مختلفة.. إنتِ السحر اللي منور أيامي كلها.",
+                img: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=150&auto=format&fit=crop&q=80"
+            },
+            {
+                title: "لحد آخر العمر ♾️",
+                text: "مهما طال بيا الزمن ومهما حصل، هختارك إنتِ وبس في كل حياة وكل يوم جديد.",
+                img: "https://images.unsplash.com/photo-1522748982276-1ddb060f6445?w=150&auto=format&fit=crop&q=80"
+            }
+        ];
+
+        function launchUniverse() {
+            const welcome = document.getElementById('welcome-screen');
+            const ui = document.getElementById('ui-layer');
+            
+            welcome.style.opacity = '0';
+            setTimeout(() => {
+                welcome.style.display = 'none';
+                ui.style.opacity = '1';
+                initGalaxySpace();
+            }, 1000);
+        }
+
+        function initGalaxySpace() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            document.body.appendChild(renderer.domElement);
+
+            // مجرة 4K كثيفة ونجوم متطورة
+            const count = 35000;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(count * 3);
+            const colors = new Float32Array(count * 3);
+
+            const colorIn = new THREE.Color('#ff1493');
+            const colorOut = new THREE.Color('#7b2cbf');
+
+            for (let i = 0; i < count; i++) {
+                const i3 = i * 3;
+                const radius = Math.random() * 16;
+                const spin = radius * 0.5;
+                const branch = ((i % 4) * Math.PI * 2) / 4;
+
+                positions[i3] = Math.cos(branch + spin) * radius + (Math.random() - 0.5) * 2;
+                positions[i3 + 1] = (Math.random() - 0.5) * 2;
+                positions[i3 + 2] = Math.sin(branch + spin) * radius + (Math.random() - 0.5) * 2;
+
+                const mixed = colorIn.clone();
+                mixed.lerp(colorOut, radius / 16);
+                colors[i3] = mixed.r;
+                colors[i3 + 1] = mixed.g;
+                colors[i3 + 2] = mixed.b;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 0.038, sizeAttenuation: true, depthWrite: false,
+                blending: THREE.AdditiveBlending, vertexColors: true
+            });
+
+            galaxyParticles = new THREE.Points(geometry, material);
+            scene.add(galaxyParticles);
+
+            // القلب 4D و 4K (دقة عالية وتأثيرات نيون متطورة)
+            const heartShape = new THREE.Shape();
+            const x = 0, y = 0;
+            heartShape.moveTo(x + 5, y + 5);
+            heartShape.bezierCurveTo(x + 5, y + 5, x + 4, y, x, y);
+            heartShape.bezierCurveTo(x - 6, y, x - 6, y + 7, x - 6, y + 7);
+            heartShape.bezierCurveTo(x - 6, y + 11, x - 3, y + 15.4, x + 5, y + 19);
+            heartShape.bezierCurveTo(x + 13, y + 15.4, x + 16, y + 11, x + 16, y + 7);
+            heartShape.bezierCurveTo(x + 16, y + 7, x + 16, y, x + 10, y);
+            heartShape.bezierCurveTo(x + 7, y, x + 5, y + 5, x + 5, y + 5);
+
+            const settings = { depth: 3, bevelEnabled: true, bevelSegments: 8, steps: 4, bevelSize: 1.2, bevelThickness: 1.2 };
+            const heartGeo = new THREE.ExtrudeGeometry(heartShape, settings);
+            heartGeo.center();
+            
+            const heartMat = new THREE.MeshBasicMaterial({ color: 0xff007f, wireframe: true });
+            centralHeart = new THREE.Mesh(heartGeo, heartMat);
+            centralHeart.scale.set(0.14, 0.14, 0.14);
+            centralHeart.position.set(0, 0.8, 0);
+            scene.add(centralHeart);
+
+            // إنشاء الكروت كـ كرات مضيئة تدور جوا المجرة نفسها
+            const orbGeo = new THREE.SphereGeometry(0.35, 32, 32);
+            const orbMat = new THREE.MeshBasicMaterial({ color: 0xff69b4, wireframe: false });
+
+            const orbDistances = [5, 7.5, 10];
+            for (let i = 0; i < 3; i++) {
+                const orb = new THREE.Mesh(orbGeo, orbMat);
+                orb.userData = { id: i };
+                scene.add(orb);
+                interactiveOrbs.push({ mesh: orb, angle: i * ((Math.PI * 2) / 3), distance: orbDistances[i] });
+            }
+
+            camera.position.set(0, 4, 12);
+            camera.lookAt(0, 0, 0);
+
+            window.addEventListener('click', onDocumentTouchClick, false);
+            animateScene();
+        }
+
+        let clock = new THREE.Clock();
+        function animateScene() {
+            requestAnimationFrame(animateScene);
+            const time = clock.getElapsedTime();
+
+            if (galaxyParticles) {
+                galaxyParticles.rotation.y = time * 0.035;
+            }
+
+            if (centralHeart) {
+                centralHeart.rotation.y = time * 0.45;
+                centralHeart.rotation.z = Math.sin(time * 2) * 0.1; // تأثير 4D إضافي
+                const scale = 0.14 + Math.sin(time * 5) * 0.018;
+                centralHeart.scale.set(scale, scale, scale);
+            }
+
+            // تحريك الكرات المضيئة (الكروت) في مدارات داخل المجرة
+            interactiveOrbs.forEach((item, index) => {
+                item.angle += 0.008;
+                item.mesh.position.x = Math.cos(item.angle) * item.distance;
+                item.mesh.position.z = Math.sin(item.angle) * item.distance;
+                item.mesh.position.y = Math.sin(time * 2 + index) * 0.6;
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        function onDocumentTouchClick(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(interactiveOrbs.map(o => o.mesh));
+
+            if (intersects.length > 0) {
+                const clickedOrb = intersects[0].object;
+                const cardIndex = clickedOrb.userData.id;
+                openCardModal(cardIndex);
+            }
+        }
+
+        function openCardModal(index) {
+            const data = cardsData[index];
+            document.getElementById('card-title').innerText = data.title;
+            document.getElementById('card-text').innerText = data.text;
+            document.getElementById('card-img').src = data.img;
+            document.getElementById('modal-overlay').classList.add('active');
+        }
+
+        function closeCardDirect() {
+            document.getElementById('modal-overlay').classList.remove('active');
+        }
+
+        function closeCard(event) {
+            if (event.target.id === 'modal-overlay') {
+                closeCardDirect();
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
